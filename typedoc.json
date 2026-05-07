@@ -1,0 +1,12 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "docs",
+  "readme": "./README.md",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/tests/**"
+  ]
+}
