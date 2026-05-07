@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run --coverage",
     "test:watch": "vitest --coverage",
-    "docs": "typedoc --entryPointStrategy expand --out docs src",
+    "docs": "typedoc --readme ./README.md --entryPointStrategy expand --out docs src",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
