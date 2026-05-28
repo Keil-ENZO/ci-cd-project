@@ -11,7 +11,6 @@ describe("Integration - Registration Flow", () => {
     test("should fill and submit the registration form successfully", async () => {
         render(<App />);
 
-        // Get all fields
         const prenomInput = screen.getByLabelText("Prénom");
         const nomInput = screen.getByLabelText("Nom");
         const mailInput = screen.getByLabelText("Email");
@@ -20,33 +19,29 @@ describe("Integration - Registration Flow", () => {
         const cpInput = screen.getByLabelText("Code Postal");
         const submitButton = screen.getByRole("button", { name: /Valider l'inscription/i });
 
-        // Fill the form using fireEvent (synchronous, no timer issues)
         fireEvent.change(prenomInput, { target: { value: "Jean" } });
         fireEvent.change(nomInput, { target: { value: "Dupont" } });
         fireEvent.change(mailInput, { target: { value: "jean.dupont@example.com" } });
-        fireEvent.change(birthInput, { target: { value: "1990-01-01" } }); // Definitely > 18
+        fireEvent.change(birthInput, { target: { value: "1990-01-01" } });
         fireEvent.change(villeInput, { target: { value: "Paris" } });
         fireEvent.change(cpInput, { target: { value: "75001" } });
 
-        // Submit the form
+        expect(submitButton).not.toBeDisabled();
+
         fireEvent.click(submitButton);
 
-        // Check if success message is shown
         await waitFor(() => {
-          expect(screen.getByText(/Inscription réussie/i)).toBeInTheDocument();
+            const savedData = JSON.parse(localStorage.getItem('user_registration') || '{}');
+            expect(savedData.prenom).toBe("Jean");
+            expect(savedData.nom).toBe("Dupont");
+            expect(savedData.cp).toBe("75001");
         });
-        
-        expect(screen.getByText(/Jean Dupont/i)).toBeInTheDocument();
 
-        // Check if data is saved in localStorage
-        const savedData = JSON.parse(localStorage.getItem('user_registration') || '{}');
-        expect(savedData.prenom).toBe("Jean");
-        expect(savedData.cp).toBe("75001");
-
-        // Close the dialog for coverage
-        const closeButton = screen.getByRole("button", { name: /Fermer/i });
-        fireEvent.click(closeButton);
-        expect(screen.queryByText(/Inscription réussie/i)).not.toBeInTheDocument();
+        await waitFor(() => {
+            expect((prenomInput as HTMLInputElement).value).toBe("");
+            expect((nomInput as HTMLInputElement).value).toBe("");
+            expect((cpInput as HTMLInputElement).value).toBe("");
+        });
     });
 
     test("should show error messages for invalid inputs", async () => {
@@ -56,7 +51,7 @@ describe("Integration - Registration Flow", () => {
         const cpInput = screen.getByLabelText("Code Postal");
         const prenomInput = screen.getByLabelText("Prénom");
 
-        fireEvent.change(prenomInput, { target: { value: "A" } }); // Too short
+        fireEvent.change(prenomInput, { target: { value: "A" } });
         expect(await screen.findByTestId("error-prenom")).toBeInTheDocument();
 
         const nomInput = screen.getByLabelText("Nom");
@@ -73,10 +68,21 @@ describe("Integration - Registration Flow", () => {
         fireEvent.change(cpInput, { target: { value: "123" } });
         expect(await screen.findByTestId("error-cp")).toBeInTheDocument();
 
-        // Try submitting invalid form directly
         const form = screen.getByTestId("registration-form");
         fireEvent.submit(form);
-        expect(screen.queryByText(/Inscription réussie/i)).not.toBeInTheDocument();
+        expect(localStorage.getItem('user_registration')).toBeNull();
+    });
+
+    test("should trigger all error toasts when submitting completely empty form", () => {
+        render(<App />);
+
+        const form = screen.getByTestId("registration-form");
+        fireEvent.submit(form);
+
+        expect(localStorage.getItem('user_registration')).toBeNull();
+
+        const submitButton = screen.getByRole("button", { name: /Valider l'inscription/i });
+        expect(submitButton).toBeDisabled();
     });
 
     test("should keep the button disabled if user is under 18", () => {
@@ -85,17 +91,15 @@ describe("Integration - Registration Flow", () => {
         const birthInput = screen.getByLabelText("Date de naissance");
         const submitButton = screen.getByRole("button", { name: /Valider l'inscription/i });
 
-        // Fill all other fields
         fireEvent.change(screen.getByLabelText("Prénom"), { target: { value: "Jean" } });
         fireEvent.change(screen.getByLabelText("Nom"), { target: { value: "Dupont" } });
         fireEvent.change(screen.getByLabelText("Email"), { target: { value: "jean@test.com" } });
         fireEvent.change(screen.getByLabelText("Ville"), { target: { value: "Paris" } });
         fireEvent.change(screen.getByLabelText("Code Postal"), { target: { value: "75001" } });
 
-        // Fill age < 18 (e.g. today or last year)
         const currentYear = new Date().getFullYear();
         fireEvent.change(birthInput, { target: { value: `${currentYear}-01-01` } });
-        
+
         expect(submitButton).toBeDisabled();
         expect(screen.getByText(/Mineur \(Inscription bloquée\)/i)).toBeInTheDocument();
     });

@@ -3,7 +3,6 @@ import { checkAge } from "../../utils/age";
 
 describe("checkAge", () => {
     beforeAll(() => {
-        // Fixe la date système pour que le test soit déterministe
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-05-05"));
     });
