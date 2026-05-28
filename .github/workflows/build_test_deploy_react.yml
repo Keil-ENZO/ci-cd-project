@@ -60,10 +60,30 @@ jobs:
         run: |
           git config --global user.email "enzo.keil@ynov.com"
           git config --global user.name "enzoooooo"
+          
+          # Forcer l'authentification
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          
           npm run build-npm-ci
-          npm version patch
-          npm publish --access public
-          git push --follow-tags
+          
+          # Comparer les versions
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          NPM_VERSION=$(npm view @enzoooooo/ci-cd-project version 2>/dev/null || echo "0.0.0")
+          
+          echo "Version locale : $LOCAL_VERSION"
+          echo "Version NPM : $NPM_VERSION"
+          
+          # Si la version locale est inférieure ou égale à celle sur NPM, on patche
+          if [ "$(printf '%s\n' "$NPM_VERSION" "$LOCAL_VERSION" | sort -V | head -n1)" = "$LOCAL_VERSION" ]; then
+            echo "Mise à jour de la version..."
+            npm version patch
+            npm publish --access public
+            git push --follow-tags
+          else
+            echo "La version locale est déjà supérieure, publication..."
+            npm publish --access public
+            git push --follow-tags
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
