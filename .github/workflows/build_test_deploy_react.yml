@@ -63,9 +63,7 @@ jobs:
           npm run build-npm-ci
           npm version patch
           npm publish --access public
-          git add .
-          git commit -m "updated version"
-          git push
+          git push --follow-tags
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
