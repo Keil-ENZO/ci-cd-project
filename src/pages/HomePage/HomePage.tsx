@@ -13,6 +13,11 @@ import { checkMail } from '../../utils/mail'
 import { checkName, checkCP } from '../../utils/form'
 import { toast, Toaster } from 'sonner'
 
+/**
+ * HomePage component.
+ * Displays the main registration form with validation and toast notifications.
+ * @returns {JSX.Element} The rendered HomePage component.
+ */
 export const HomePage = () => {
   const [formData, setFormData] = useState({
     nom: '',
