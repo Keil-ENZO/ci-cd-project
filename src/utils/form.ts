@@ -5,8 +5,7 @@
  */
 export function checkName(name: string): boolean {
   if (typeof name !== 'string') return false;
-  // Regex: at least 2 chars, letters (including accents), spaces, hyphens
-  const nameRegex = /^[a-zA-ZàâäéèêëïîôöùûüçÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ\s-]{2,}$/;
+  const nameRegex = /^[\p{L}\s\-']{2,}$/u;
   return nameRegex.test(name.trim());
 }
 
