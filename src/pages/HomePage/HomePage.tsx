@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { Hero } from '../../components/Hero/Hero'
-import { Counter } from '../../components/Counter/Counter'
 import {
   Field,
   FieldGroup,
@@ -10,19 +8,12 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { checkAge } from '../../utils/age'
 import { checkMail } from '../../utils/mail'
 import { checkName, checkCP } from '../../utils/form'
+import { toast, Toaster } from 'sonner'
 
 export const HomePage = () => {
-  const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
@@ -32,8 +23,7 @@ export const HomePage = () => {
     cp: '',
   })
 
-  // Global validation state
-  const isFormValid = 
+  const isFormValid =
     checkName(formData.prenom) &&
     checkName(formData.nom) &&
     checkMail(formData.mail) &&
@@ -44,10 +34,18 @@ export const HomePage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (isFormValid) {
-      // Sauvegarde dans le localStorage
       localStorage.setItem('user_registration', JSON.stringify(formData))
-      console.log("Données enregistrées dans localStorage :", formData)
-      setIsOpen(true)
+      toast.success('Inscription réussie !', {
+        description: `Bienvenue ${formData.prenom} ${formData.nom} 🎉`,
+      })
+      setFormData({ nom: '', prenom: '', mail: '', birth: '', ville: '', cp: '' })
+    } else {
+      if (!checkName(formData.prenom)) toast.error('Prénom invalide', { description: 'Min 2 lettres, sans chiffres ni caractères spéciaux.' })
+      if (!checkName(formData.nom)) toast.error('Nom invalide', { description: 'Min 2 lettres, sans chiffres ni caractères spéciaux.' })
+      if (!checkMail(formData.mail)) toast.error('Email invalide', { description: 'Veuillez saisir une adresse email valide.' })
+      if (!checkAge(formData.birth)) toast.error('Âge invalide', { description: 'Vous devez avoir au moins 18 ans pour vous inscrire.' })
+      if (!checkName(formData.ville)) toast.error('Ville invalide', { description: 'Min 2 lettres, sans chiffres ni caractères spéciaux.' })
+      if (!checkCP(formData.cp)) toast.error('Code postal invalide', { description: 'Le code postal doit contenir exactement 5 chiffres.' })
     }
   }
 
@@ -58,17 +56,24 @@ export const HomePage = () => {
   return (
     <>
       <section id="center">
-        <Hero />
+        <Toaster />
         <div>
-          <h1 className="text-4xl font-bold mb-4">Bienvenue</h1>
+          <h1 className="text-4xl font-bold ">Bienvenue</h1>
           <p className="text-muted-foreground">
             Inscrivez-vous dès maintenant pour accéder à votre espace.
           </p>
+          <a
+            href="./docs/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mt-2 text-sm underline underline-offset-4 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Documentation technique
+          </a>
         </div>
-        <Counter />
       </section>
 
-      <div className="max-w-2xl mx-auto w-full mt-8 mb-12 p-8 border rounded-2xl bg-card shadow-lg">
+      <div className="max-w-2xl mx-auto w-full mb-12 p-8 border bg-card shadow-lg">
         <form onSubmit={handleSubmit} data-testid="registration-form">
           <FieldSet>
             <FieldLegend className="text-2xl font-bold mb-6">Informations Personnelles</FieldLegend>
@@ -111,24 +116,6 @@ export const HomePage = () => {
           </Button>
         </form>
       </div>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md bg-card border-accent/20">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <span className="text-green-500">✅</span> Inscription réussie
-            </DialogTitle>
-            <DialogDescription className="text-lg pt-2">
-              L'utilisateur <strong className="text-foreground">{formData.prenom} {formData.nom}</strong> a été bien enregistré avec succès dans le localStorage.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex justify-end">
-            <Button onClick={() => setIsOpen(false)} className="px-8">
-              Fermer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
