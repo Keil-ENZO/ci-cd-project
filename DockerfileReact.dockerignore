@@ -1,0 +1,35 @@
+# Git
+.git
+.github
+.gitignore
+
+# Environment & secrets
+.env
+.env.*
+
+# Node modules (rebuilt inside container)
+node_modules
+
+# MySQL specific
+migration
+Dockerfile
+DockerfileReact
+
+# Python server
+server
+
+# Build output & test artifacts
+dist
+coverage
+test-report
+docs
+
+# Misc
+codecov
+codecov.SHA256SUM
+codecov.SHA256SUM.sig
+.npmignore
+.dockerignore
+.DS_Store
+rendu_KEIL_Enzo.txt
+*.md

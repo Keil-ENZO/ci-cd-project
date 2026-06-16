@@ -1,0 +1,46 @@
+# Git
+.git
+.github
+.gitignore
+
+# Environment & secrets
+.env
+.env.*
+
+# Node.js
+node_modules
+npm-debug.log*
+package-lock.json
+
+# Build output
+dist
+coverage
+test-report
+docs
+
+# Frontend source (not needed for MySQL image)
+src
+public
+index.html
+*.ts
+*.js
+*.cjs
+*.json
+components.json
+babel.config.cjs
+eslint.config.js
+vite.config.ts
+typedoc.json
+tsconfig*.json
+
+# Python server (has its own Dockerfile)
+server
+
+# CI / misc
+codecov
+codecov.SHA256SUM
+codecov.SHA256SUM.sig
+.npmignore
+.DS_Store
+*.md
+rendu_KEIL_Enzo.txt
