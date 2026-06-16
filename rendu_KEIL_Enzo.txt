@@ -1,0 +1,18 @@
+Rendu Projet CI/CD - KEIL Enzo
+==================================================
+
+1. Lien du repository GitHub public :
+https://github.com/Keil-ENZO/ci-cd-project
+
+2. Lien du projet déployé sur GitHub Pages :
+https://Keil-ENZO.github.io/ci-cd-project/
+
+3. Lien vers le package NPM public :
+https://www.npmjs.com/package/@enzoooooo/ci-cd-project
+
+4. Lien vers le rapport de couverture Codecov public :
+https://codecov.io/gh/Keil-ENZO/ci-cd-project
+
+--------------------------------------------------
+Note concernant les tests et le coverage :
+Petite précision pour la couverture de tests : j'ai fait le choix d'exclure le dossier "src/components/ui" du calcul Codecov. Comme j'ai utilisé la librairie Shadcn UI pour le design, ce dossier contient uniquement des composants visuels générés automatiquement. Les tester n'avait pas trop de sens pour l'exercice et ça faisait baisser le score pour rien. En revanche, tout le code que j'ai réellement écrit (logique du formulaire, pages, règles de validation) est bien couvert à 100 % !
