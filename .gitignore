@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Environment variables - NEVER commit these
+.env
+.env.*
+
 # Build & Test outputs
 docs
 coverage
