@@ -30,12 +30,13 @@ _conn = None
 _initialized = False
 
 
-def _truthy(value: str | None) -> bool:
-    return (value or "").lower() in ("1", "true", "yes", "on")
-
-
 def get_conn():
-    """Ouvre (ou réutilise) la connexion MySQL. Reconnecte si elle est tombée."""
+    """Ouvre (ou réutilise) la connexion MySQL. Reconnecte si elle est tombée.
+
+    On laisse le SSL au comportement par défaut du connecteur (TLS négocié si le
+    serveur le supporte) : indispensable pour l'auth caching_sha2_password de
+    MySQL 9.x en local, et fonctionne aussi avec Aiven (TLS requis).
+    """
     global _conn
     if _conn is not None:
         try:
@@ -44,7 +45,6 @@ def get_conn():
         except mysql.connector.Error:
             pass
 
-    use_ssl = _truthy(os.getenv("MYSQL_SSL"))
     _conn = mysql.connector.connect(
         host=os.getenv("MYSQL_HOST"),
         port=int(os.getenv("MYSQL_PORT", "3306")),
@@ -52,7 +52,6 @@ def get_conn():
         # MYSQL_PASSWORD en prod (Aiven) ; MYSQL_ROOT_PASSWORD en local (Docker).
         password=os.getenv("MYSQL_PASSWORD") or os.getenv("MYSQL_ROOT_PASSWORD"),
         database=os.getenv("MYSQL_DATABASE"),
-        ssl_disabled=not use_ssl,
         connection_timeout=10,
     )
     return _conn
