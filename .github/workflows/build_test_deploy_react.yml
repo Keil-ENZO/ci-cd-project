@@ -83,6 +83,9 @@ jobs:
       - name: Build Web Application
         run: |
           npm run build
+        env:
+          # URL du backend Vercel (variable de repo). Injectée dans le bundle Pages.
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
 
       - name: Generate Documentation
         run: |
