@@ -31,3 +31,7 @@ test-report
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.pyc
