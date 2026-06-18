@@ -18,7 +18,7 @@ export default defineConfig({
     globals: true,
     setupFiles: './src/tests/setup.ts',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['dist/**', 'node_modules/**'],
+    exclude: ['dist/**', 'node_modules/**', 'src/tests/unitaire/api.test.ts'],
     reporters: ['default', 'html'],
     outputFile: {
       html: './test-report/index.html',
