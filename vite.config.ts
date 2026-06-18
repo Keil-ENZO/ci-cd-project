@@ -7,6 +7,10 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   base: "/ci-cd-project/",
+  // Injecte l'URL du backend au build (VITE_API_URL en CI ; vide en local -> fallback localhost).
+  define: {
+    __API_URL__: JSON.stringify(process.env.VITE_API_URL ?? ''),
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

@@ -1,8 +1,13 @@
 import axios from 'axios'
 
-export const api = axios.create({
-    baseURL: 'http://localhost:8000'
-})
+// `__API_URL__` est remplacé au build par Vite (cf. vite.config.ts `define`),
+// alimenté par VITE_API_URL (backend Vercel en prod). Fallback : backend Docker local.
+// Hors Vite (ex: Jest), le token n'existe pas -> on retombe sur le fallback.
+declare const __API_URL__: string
+const baseURL =
+  (typeof __API_URL__ !== 'undefined' && __API_URL__) || 'http://localhost:8000'
+
+export const api = axios.create({ baseURL })
 
 export interface UserFormData {
     nom: string
