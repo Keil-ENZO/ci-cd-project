@@ -134,3 +134,29 @@ jobs:
       - name: Dump container logs on failure
         if: failure()
         run: docker compose logs
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    # Déploie le backend sur Vercel UNIQUEMENT si les tests d'infra et E2E passent,
+    # et seulement sur un push vers main (pas sur les pull requests).
+    needs: [test-docker, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      # Build distant côté Vercel (installe les deps Python chez Vercel).
+      - name: Deploy to Vercel (production)
+        run: vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
