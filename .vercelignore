@@ -1,0 +1,18 @@
+# On ne déploie que le backend Python sur Vercel — on exclut tout le front et les tests.
+node_modules
+dist
+test-report
+coverage
+src
+public
+cypress
+cypress.config.ts
+.jest
+jest.config.cjs
+migration
+docker-compose.yml
+Dockerfile
+DockerfileReact
+DockerfileReact.dockerignore
+.github
+*.md

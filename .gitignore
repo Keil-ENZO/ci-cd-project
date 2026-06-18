@@ -35,3 +35,6 @@ test-report
 # Python
 __pycache__/
 *.pyc
+
+# Vercel
+.vercel
