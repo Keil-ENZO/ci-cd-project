@@ -68,3 +68,47 @@ describe('E2E - Parcours complet sur la stack Docker', () => {
         cy.get('[data-testid="users-list"]').should('not.contain', uniqueMail)
     })
 })
+
+describe('E2E - Mode offline (réseau coupé)', () => {
+    it('affiche une erreur si le chargement du compteur échoue', () => {
+        // Coupe le réseau sur le chargement du compteur (GET /users).
+        cy.intercept('GET', '**/users', { forceNetworkError: true }).as('usersOffline')
+        cy.visit('/')
+
+        cy.get('[data-testid="load-error"]').should('be.visible')
+        cy.contains("Impossible de charger le nombre d'utilisateurs").should('be.visible')
+    })
+
+    it('affiche un toast d\'erreur serveur si l\'inscription échoue', () => {
+        cy.visit('/') // chargement initial normal
+
+        cy.get('#prenom').type('Jean')
+        cy.get('#nom').type('Dupont')
+        cy.get('#mail').type('offline@test.com')
+        cy.get('#birth').type('2000-01-15')
+        cy.get('#ville').type('Paris')
+        cy.get('#cp').type('75001')
+
+        // Coupe le réseau au moment de l'envoi (POST /users).
+        cy.intercept('POST', '**/users', { forceNetworkError: true }).as('addOffline')
+        cy.get('[data-testid="registration-form"] button[type="submit"]')
+            .should('not.be.disabled')
+            .click()
+
+        cy.contains('Erreur serveur').should('be.visible')
+    })
+
+    it('affiche un échec de connexion si /login échoue', () => {
+        cy.visit('/')
+
+        cy.get('#admin-mail').type('admin@test.com')
+        cy.get('#admin-password').type('whatever', { log: false })
+
+        // Coupe le réseau sur la connexion (POST /login).
+        cy.intercept('POST', '**/login', { forceNetworkError: true }).as('loginOffline')
+        cy.get('[data-testid="login-button"]').click()
+
+        cy.contains('Échec de la connexion').should('be.visible')
+        cy.get('[data-testid="admin-banner"]').should('not.exist')
+    })
+})
