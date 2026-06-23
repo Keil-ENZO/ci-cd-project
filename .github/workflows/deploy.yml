@@ -1,0 +1,160 @@
+name: Deploy App (Registry privé + EC2)
+
+# Déclenchement manuel uniquement
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-west-3
+  REGISTRY: ${{ secrets.REGISTRY_HOST }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --- Identifiants AWS (clés IAM permanentes en secrets) ---
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ========================================================
+      # 1. BUILD & PUSH des images vers le registre privé AWS
+      # ========================================================
+      - name: Faire confiance au registre privé (cert auto-signé)
+        run: |
+          echo "{\"insecure-registries\":[\"${REGISTRY}:443\"]}" | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+
+      - name: Docker login sur le registre privé
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${REGISTRY}:443 \
+            -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+      - name: Build & push de l'image Frontend
+        run: |
+          docker build -t ${REGISTRY}:443/frontend -f DockerfileReact .
+          docker push ${REGISTRY}:443/frontend
+
+      - name: Build & push de l'image Backend
+        run: |
+          docker build -t ${REGISTRY}:443/backend -f server/Dockerfile ./server
+          docker push ${REGISTRY}:443/backend
+
+      - name: Build & push de l'image Base de données (migration_mysql)
+        run: |
+          docker build -t ${REGISTRY}:443/migration_mysql -f Dockerfile .
+          docker push ${REGISTRY}:443/migration_mysql
+
+      # ========================================================
+      # 2. PROVISIONNING Terraform (2e EC2 applicative)
+      # ========================================================
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init & Apply
+        working-directory: app-infra
+        run: |
+          terraform init -input=false
+          terraform apply -auto-approve -input=false
+
+      # ========================================================
+      # 3. BRIDGE CI/CD : génération de l'inventory.ini à la volée
+      # ========================================================
+      - name: Génération de l'inventory Ansible depuis les outputs Terraform
+        working-directory: app-infra
+        run: |
+          APP_IP=$(terraform output -raw instance_ip)
+          echo "APP_IP=$APP_IP" >> "$GITHUB_ENV"
+          cat > inventory.ini <<EOF
+          [app_hosts]
+          $APP_IP
+
+          [app_hosts:vars]
+          ansible_user=ubuntu
+          ansible_ssh_private_key_file=app-key.pem
+          ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+          EOF
+          echo "----- inventory.ini généré -----"
+          cat inventory.ini
+
+      - name: Attente de la disponibilité SSH
+        run: |
+          for i in $(seq 1 30); do
+            if nc -z -w5 "$APP_IP" 22; then echo "SSH prêt"; exit 0; fi
+            echo "Attente SSH ($i)..."; sleep 10
+          done
+          echo "SSH indisponible"; exit 1
+
+      # ========================================================
+      # 4. CONFIGURATION Ansible (pull depuis le registre + run)
+      # ========================================================
+      - name: Installation d'Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Génération du fichier d'extra-vars (secrets)
+        working-directory: app-infra
+        run: |
+          cat > vars.json <<EOF
+          {
+            "registry_host": "${{ secrets.REGISTRY_HOST }}",
+            "registry_username": "${{ secrets.REGISTRY_USERNAME }}",
+            "registry_password": "${{ secrets.REGISTRY_PASSWORD }}",
+            "mysql_root_password": "${{ secrets.MYSQL_ROOT_PASSWORD }}",
+            "mysql_database": "ynov_ci",
+            "mysql_user": "root",
+            "mysql_host": "db",
+            "admin_email": "${{ secrets.ADMIN_EMAIL }}",
+            "admin_password": "${{ secrets.ADMIN_PASSWORD }}",
+            "jwt_secret": "${{ secrets.JWT_SECRET }}",
+            "vite_server_port": "8000"
+          }
+          EOF
+
+      - name: Exécution du playbook applicatif
+        working-directory: app-infra
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          ansible-playbook -i inventory.ini playbook.yml -e @vars.json
+          rm -f vars.json
+
+      # ========================================================
+      # 5. VALIDATION post-déploiement (hors Ansible)
+      # ========================================================
+      - name: Validation Backend (FastAPI /users)
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "http://$APP_IP:8000/users"; then
+              echo " -> Backend OK"; exit 0
+            fi
+            echo "Attente backend ($i)..."; sleep 10
+          done
+          echo "Backend KO"; exit 1
+
+      - name: Validation Frontend (port 3000)
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null -w "%{http_code}" "http://$APP_IP:3000" | grep -q 200; then
+              echo " -> Frontend OK"; exit 0
+            fi
+            echo "Attente frontend ($i)..."; sleep 10
+          done
+          echo "Frontend KO"; exit 1
+
+      - name: Récapitulatif
+        run: |
+          echo "Déploiement terminé sur http://$APP_IP"
+          echo "  Frontend : http://$APP_IP:3000"
+          echo "  Backend  : http://$APP_IP:8000"
+          echo "  Adminer  : http://$APP_IP:8080"

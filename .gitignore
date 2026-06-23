@@ -3,6 +3,14 @@ logs
 *.log
 npm-debug.log*
 yarn-debug.log*
+
+# Terraform & secrets infra (état local éphémère, clés, extra-vars)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.pem
+**/vars.json
+**/inventory.ini
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*

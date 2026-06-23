@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  registry:
+    image: registry:2
+    restart: always
+    # Plus d'exposition publique : accessible uniquement en interne via nginx
+    expose:
+      - "5000"
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.password
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    volumes:
+      - ./data:/var/lib/registry
+      - ./auth:/auth:ro
+
+  ui:
+    image: joxit/docker-registry-ui:main
+    restart: always
+    # Plus d'exposition publique : accessible uniquement en interne via nginx
+    expose:
+      - "80"
+    environment:
+      - REGISTRY_TITLE=Ansible Deployed Registry
+      - REGISTRY_URL=https://{{ public_ip }}:443
+      - SINGLE_REGISTRY=true
+      - DELETE_IMAGES=true
+    depends_on:
+      - registry
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    # Seul point d'entrée public : HTTPS
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - registry
+      - ui

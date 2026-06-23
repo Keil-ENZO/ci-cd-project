@@ -1,0 +1,93 @@
+---
+- name: Déploiement de la stack applicative
+  hosts: app_hosts
+  become: true
+  vars:
+    project_dir: "/home/ubuntu/app-stack"
+    # Variables fournies par la CI via --extra-vars :
+    #   registry_host, registry_username, registry_password,
+    #   mysql_root_password, mysql_database, mysql_user, mysql_host,
+    #   admin_email, admin_password, jwt_secret, vite_server_port
+
+  tasks:
+    # 1. Installation Docker
+    - name: Installation des paquets
+      apt:
+        update_cache: yes
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+
+    - name: Ajout user au groupe docker
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    # 2. Faire confiance au registre privé (certificat auto-signé sur :443)
+    - name: Configuration insecure-registries dans daemon.json
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "insecure-registries": ["{{ registry_host }}:443"]
+          }
+        mode: "0644"
+      notify: restart docker
+
+    # On vide les handlers tout de suite pour que Docker redémarre AVANT le login
+    - name: Application immédiate de la conf Docker
+      meta: flush_handlers
+
+    # 3. Authentification au registre privé
+    - name: Docker login sur le registre privé
+      command: >
+        docker login {{ registry_host }}:443
+        -u {{ registry_username }}
+        -p {{ registry_password }}
+      no_log: true
+
+    # 4. Préparation du dossier + compose templaté
+    - name: Création du dossier projet
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Copie du docker-compose.yml (templaté)
+      template:
+        src: docker-compose.yml
+        dest: "{{ project_dir }}/docker-compose.yml"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
+    # 5. Pull + démarrage
+    - name: Pull des images depuis le registre privé
+      command: docker compose pull
+      args:
+        chdir: "{{ project_dir }}"
+
+    - name: Démarrage de la stack
+      command: docker compose up -d --force-recreate
+      args:
+        chdir: "{{ project_dir }}"
+
+    - name: Statut des conteneurs
+      command: docker compose ps
+      args:
+        chdir: "{{ project_dir }}"
+      register: compose_ps
+
+    - name: Affichage du statut
+      debug:
+        msg: "{{ compose_ps.stdout_lines }}"
+
+  handlers:
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted
