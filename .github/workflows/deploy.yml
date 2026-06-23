@@ -81,7 +81,7 @@ jobs:
           [app_hosts:vars]
           ansible_user=ubuntu
           ansible_ssh_private_key_file=app-key.pem
-          ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+          ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=10'
           EOF
           echo "----- inventory.ini généré -----"
           cat inventory.ini
@@ -125,6 +125,8 @@ jobs:
         working-directory: app-infra
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
+          ANSIBLE_TIMEOUT: "60"
+          ANSIBLE_SSH_RETRIES: "5"
         run: |
           ansible-playbook -i inventory.ini playbook.yml -e @vars.json
           rm -f vars.json
