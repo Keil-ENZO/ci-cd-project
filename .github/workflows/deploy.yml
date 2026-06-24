@@ -146,8 +146,9 @@ jobs:
 
       - name: Validation Frontend (port 3000)
         run: |
+          # -L : suit la redirection 302 (l'app a un base path /ci-cd-project/)
           for i in $(seq 1 30); do
-            if curl -fsS -o /dev/null -w "%{http_code}" "http://$APP_IP:3000" | grep -q 200; then
+            if curl -fsSL -o /dev/null -w "%{http_code}" "http://$APP_IP:3000" | grep -q 200; then
               echo " -> Frontend OK"; exit 0
             fi
             echo "Attente frontend ($i)..."; sleep 10
