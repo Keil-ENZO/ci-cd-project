@@ -4,6 +4,8 @@ services:
   db:
     image: {{ registry_host }}:443/migration_mysql
     restart: always
+    # Tuning mémoire : la t3.micro n'a que 1 Go de RAM
+    command: --innodb-buffer-pool-size=128M --performance-schema=OFF
     environment:
       - MYSQL_ROOT_PASSWORD={{ mysql_root_password }}
     volumes:

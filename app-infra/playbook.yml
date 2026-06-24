@@ -25,6 +25,19 @@
         groups: docker
         append: yes
 
+    # La t3.micro n'a que 1 Go de RAM : sans swap, le démarrage simultané
+    # de MySQL + frontend + backend sature la mémoire et rend SSH injoignable
+    # (timeout "banner exchange"). 2 Go de swap évitent l'OOM.
+    - name: Création d'un fichier swap (2 Go)
+      shell: |
+        fallocate -l 2G /swapfile
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        echo '/swapfile none swap sw 0 0' >> /etc/fstab
+      args:
+        creates: /swapfile
+
     # 2. Faire confiance au registre privé (certificat auto-signé sur :443)
     - name: Configuration insecure-registries dans daemon.json
       copy:
@@ -71,10 +84,16 @@
       args:
         chdir: "{{ project_dir }}"
 
+    # Async : le démarrage est lourd (init MySQL) et peut rendre la t3.micro
+    # peu réactive. On lance la commande en tâche de fond côté serveur et on
+    # sonde toutes les 15 s avec de courtes connexions, au lieu de tenir une
+    # seule session SSH fragile pendant toute la durée (-> "banner exchange").
     - name: Démarrage de la stack
       command: docker compose up -d --force-recreate
       args:
         chdir: "{{ project_dir }}"
+      async: 600
+      poll: 15
 
     - name: Statut des conteneurs
       command: docker compose ps
